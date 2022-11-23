@@ -1,0 +1,44 @@
+stages :
+   - maven_build
+   - deploy_dev
+   - test
+
+Job1:
+  
+  stage: maven_build
+  
+  tags : 
+    - runner1
+
+  script: 
+     - mvn kbuilder:all
+     - mvn -X clean install -U
+  artifacts:
+    paths:
+      - target/ 
+  only:
+    -  dossier_technique_dev
+
+
+Job2:
+  
+  stage: deploy_dev
+  script:
+    - hostname && hostname -i
+    - scp -P 22900 -o stricthostkeychecking=no target/*.jar kservice@91.134.184.94:/karaz
+    - ssh -p 22900 -o stricthostkeychecking=no kservice@91.134.184.94 "unzip -o /karaz/dossiertechnique-1.0.jar -d /karaz/dossiertechnique-1.0/ && rm -rf /karaz/glassfish5/glassfish/domains/domain1/autodeploy/karazApp/dossiertechnique-1.0 && mv /karaz/dossiertechnique-1.0 /karaz/glassfish5/glassfish/domains/domain1/autodeploy/karazApp/ "
+    - ssh -p 22900 -o stricthostkeychecking=no kservice@91.134.184.94 "/karaz/restart_glassfish.sh  'urbaformation ' "
+  tags : 
+    - runner1
+    
+  only: 
+    -  dossier_technique_dev
+
+sonarqube_master_job:
+  stage: test
+  script: 
+    - mvn sonar:sonar -Dsonar.host.url=http://91.121.47.21:9000 -Dsonar.login=448f475a05aed7c10fc0a747eb98309b2931f716
+  tags :
+    - runner1
+  only: 
+    - dossier_technique_dev
